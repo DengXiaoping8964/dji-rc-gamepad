@@ -1,0 +1,362 @@
+<!DOCTYPE html>
+<html lang="en" data-lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>dji-rc-bridge — play PC games with your DJI RC-N3</title>
+<meta name="description" content="Open-source Windows bridge that turns a DJI RC-N3 drone remote controller into a virtual Xbox 360 game controller. Reads the DUML protocol over USB serial and republishes it through ViGEmBus.">
+<meta name="color-scheme" content="dark light">
+<style>
+  :root{
+    --bg:#0b0f14; --panel:#121924; --panel2:#0f1620; --line:#1f2b3a;
+    --fg:#e6edf3; --dim:#9fb0c0; --accent:#4ec9b0; --accent2:#5aa2f7; --warn:#f0a832;
+  }
+  @media (prefers-color-scheme: light){
+    :root[data-theme="auto"]{
+      --bg:#f6f8fa; --panel:#fff; --panel2:#f0f3f6; --line:#dfe5eb;
+      --fg:#1f2328; --dim:#5b6b7b; --accent:#0f766e; --accent2:#2563eb; --warn:#b45309;
+    }
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--fg);
+    font:16px/1.65 ui-sans-serif,system-ui,"Segoe UI",Roboto,"Helvetica Neue",Arial,"Noto Sans","Microsoft YaHei",sans-serif;}
+  a{color:var(--accent2)}
+  code,pre,.mono{font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,"Liberation Mono",monospace}
+  .wrap{max-width:1040px;margin:0 auto;padding:0 20px}
+  header{padding:52px 0 30px;border-bottom:1px solid var(--line)}
+  .kicker{color:var(--accent);font-size:13px;letter-spacing:.14em;text-transform:uppercase;margin:0 0 12px}
+  h1{font-size:clamp(28px,5vw,44px);line-height:1.15;margin:0 0 14px;font-weight:700}
+  .lede{color:var(--dim);font-size:clamp(16px,2.2vw,19px);max-width:66ch;margin:0}
+  .cta{display:flex;flex-wrap:wrap;gap:12px;margin-top:26px}
+  .btn{display:inline-block;padding:11px 18px;border-radius:9px;text-decoration:none;font-weight:600;font-size:15px;border:1px solid transparent}
+  .btn.primary{background:var(--accent);color:#04110d}
+  .btn.ghost{border-color:var(--line);color:var(--fg)}
+  .btn.ghost:hover{border-color:var(--accent)}
+  nav.toc{position:sticky;top:0;background:color-mix(in srgb,var(--bg) 88%,transparent);
+    backdrop-filter:blur(8px);border-bottom:1px solid var(--line);z-index:5}
+  nav.toc ul{display:flex;gap:20px;list-style:none;margin:0;padding:12px 0;overflow-x:auto;font-size:14px}
+  nav.toc a{color:var(--dim);text-decoration:none;white-space:nowrap}
+  nav.toc a:hover{color:var(--fg)}
+  section{padding:40px 0;border-bottom:1px solid var(--line)}
+  h2{font-size:23px;margin:0 0 6px}
+  h2 + p.sub{color:var(--dim);margin:0 0 22px;font-size:15px}
+  .grid{display:grid;gap:16px}
+  .g3{grid-template-columns:repeat(auto-fit,minmax(230px,1fr))}
+  .card{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:18px}
+  .card h3{margin:0 0 6px;font-size:16px}
+  .card p{margin:0;color:var(--dim);font-size:14.5px}
+  .num{font-variant-numeric:tabular-nums;color:var(--accent);font-weight:700;font-size:26px;display:block;margin-bottom:2px}
+  pre{background:var(--panel2);border:1px solid var(--line);border-radius:10px;padding:14px 16px;overflow:auto;font-size:13.5px;line-height:1.6}
+  table{width:100%;border-collapse:collapse;font-size:14.5px}
+  th,td{text-align:left;padding:9px 10px;border-bottom:1px solid var(--line);vertical-align:top}
+  th{color:var(--dim);font-weight:600;font-size:13px;text-transform:uppercase;letter-spacing:.05em}
+  td.mono{white-space:nowrap}
+  .note{border-left:3px solid var(--warn);background:color-mix(in srgb,var(--warn) 9%,transparent);
+    padding:14px 16px;border-radius:0 10px 10px 0;color:var(--fg);font-size:15px}
+  .note strong{color:var(--warn)}
+  ul.clean{margin:0;padding-left:20px}
+  ul.clean li{margin:7px 0}
+  .lang{display:flex;gap:8px;align-items:center;margin-top:26px;font-size:13px;color:var(--dim)}
+  .lang button{background:var(--panel);border:1px solid var(--line);color:var(--dim);
+    padding:5px 11px;border-radius:20px;cursor:pointer;font:inherit;font-size:13px}
+  .lang button[aria-pressed="true"]{border-color:var(--accent);color:var(--fg)}
+  [data-en]{display:none}
+  html[data-lang="en"] [data-en]{display:block}
+  html[data-lang="en"] [data-zh]{display:none}
+  html[data-lang="en"] [data-en="inline"]{display:inline}
+  html[data-lang="zh"] [data-zh="inline"]{display:inline}
+  [data-en="inline"]{display:none}
+  footer{padding:34px 0 60px;color:var(--dim);font-size:13.5px}
+  .badge{display:inline-block;font-size:12px;padding:3px 9px;border:1px solid var(--line);
+    border-radius:20px;color:var(--dim);margin-right:6px}
+</style>
+</head>
+<body data-theme="auto">
+
+<header>
+  <div class="wrap">
+    <p class="kicker">Open source · Windows · MIT</p>
+    <h1>
+      <span data-zh>用大疆 RC-N3 打 PC 游戏</span>
+      <span data-en>Play PC games with your DJI&nbsp;RC-N3</span>
+    </h1>
+    <p class="lede">
+      <span data-en>dji-rc-bridge reads a DJI RC-N3 drone remote over USB serial using the undocumented DUML protocol and republishes it as a virtual Xbox 360 controller. Any game that supports a gamepad just works — no DLL injection, no patches.</span>
+      <span data-zh>dji-rc-bridge 通过 USB 串口、用无公开文档的 DUML 协议读取大疆 RC-N3 遥控器的输入，并把它重新发布成一台虚拟 Xbox 360 手柄。支持手柄的游戏可以直接玩——不注入 DLL、不打补丁。</span>
+    </p>
+    <div class="cta">
+      <a class="btn primary" href="https://github.com/DengXiaoping8964/dji-rc-gamepad/releases"><span data-en>Download release</span><span data-zh>下载发行版</span></a>
+      <a class="btn ghost" href="https://github.com/DengXiaoping8964/dji-rc-gamepad"><span data-en>Source on GitHub</span><span data-zh>GitHub 源码</span></a>
+      <a class="btn ghost" href="https://github.com/DengXiaoping8964/dji-rc-gamepad/blob/main/DISCLAIMER.md"><span data-en>Disclaimer</span><span data-zh>免责声明</span></a>
+    </div>
+    <div class="lang">
+      <span data-en>Language</span><span data-zh>语言</span>
+      <button id="btn-en" aria-pressed="true">English</button>
+      <button id="btn-zh" aria-pressed="false">中文</button>
+    </div>
+  </div>
+</header>
+
+<nav class="toc">
+  <div class="wrap"><ul>
+    <li><a href="#start"><span data-en>Quick start</span><span data-zh>快速开始</span></a></li>
+    <li><a href="#map"><span data-en>Mapping</span><span data-zh>按键映射</span></a></li>
+    <li><a href="#games"><span data-en>Game support</span><span data-zh>游戏兼容</span></a></li>
+    <li><a href="#config"><span data-en>Config</span><span data-zh>配置</span></a></li>
+    <li><a href="#protocol"><span data-en>Protocol</span><span data-zh>协议</span></a></li>
+    <li><a href="#limits"><span data-en>Limits</span><span data-zh>已知限制</span></a></li>
+  </ul></div>
+</nav>
+
+<section id="stats">
+  <div class="wrap">
+    <div class="grid g3">
+      <div class="card"><span class="num">86–89&nbsp;Hz</span><p><span data-en>measured polling rate on real hardware</span><span data-zh>真机实测轮询率</span></p></div>
+      <div class="card"><span class="num">2.3–5.4&nbsp;ms</span><p><span data-en>serial round-trip, 0 bad frames</span><span data-zh>串口往返延迟，坏帧 0</span></p></div>
+      <div class="card"><span class="num">0</span><p><span data-en>pad update failures in 3609 frames</span><span data-zh>3609 帧更新 0 次失败</span></p></div>
+    </div>
+  </div>
+</section>
+
+<section id="start">
+  <div class="wrap">
+    <h2><span data-en>Quick start</span><span data-zh>快速开始</span></h2>
+    <p class="sub">
+      <span data-en>Four commands from the download to in-game.</span>
+      <span data-zh>四条命令，从下载到进游戏。</span>
+    </p>
+    <div class="note" style="margin-bottom:20px">
+      <strong><span data-en>Plug into the charge / tuning USB-C port.</span><span data-zh>请插在"充电/调参"USB-C 口上。</span></strong>
+      <span data-en> The phone socket makes the remote act as a USB host and it will fail to enumerate. Install the ViGEmBus driver once, and the DJI VCOM driver (shipped with DJI Assistant 2 Consumer) if you want the ports named properly.</span>
+      <span data-zh> 接手机的口会让遥控器变成 USB 主机、导致枚举失败。另外需装一次 ViGEmBus 驱动；若希望端口名正确显示，再装 DJI Assistant 2 Consumer 带来的 DJI VCOM 驱动。</span>
+    </div>
+<pre>dji-rc-bridge.exe --scan        <span data-en># find the remote; prints "remote protocol port: COMx"</span><span data-zh># 找到遥控器，输出"遥控器协议端口: COMx"</span>
+dji-rc-bridge.exe --watch       <span data-en># confirm your sticks and keys arrive</span><span data-zh># 确认摇杆与按键数据能读到</span>
+dji-rc-bridge.exe --calibrate   <span data-en># capture centres and end-stops</span><span data-zh># 采集居中值与满行程</span>
+dji-rc-bridge.exe --run         <span data-en># bridging on — now start your game</span><span data-zh># 桥接开启 — 然后进游戏</span></pre>
+    <p style="color:var(--dim);font-size:14.5px">
+      <span data-en>The single <code>.exe</code> is self-contained (static CRT). Closing the window or pressing Ctrl+C removes the virtual pad and returns the remote to normal.</span>
+      <span data-zh>单个 <code>.exe</code> 自带运行库（静态 CRT）。关闭窗口或按 Ctrl+C 即移除虚拟手柄并让遥控器恢复正常。</span>
+    </p>
+  </div>
+</section>
+
+<section id="map">
+  <div class="wrap">
+    <h2><span data-en>Key mapping</span><span data-zh>按键映射</span></h2>
+    <p class="sub">
+      <span data-en>The remote has four digital keys, one 3-position switch, one wheel and two sticks. Exclusive hold layers make that cover a full gamepad.</span>
+      <span data-zh>遥控器只有 4 个数字键、1 个三段开关、1 个拨轮和 2 个摇杆。靠"互斥长按层"覆盖整只手柄。</span>
+    </p>
+    <table>
+      <thead><tr>
+        <th><span data-en>Remote control</span><span data-zh>遥控器</span></th>
+        <th><span data-en>Base layer</span><span data-zh>基础层</span></th>
+        <th><span data-en>L layer — hold Fn</span><span data-zh>L 层 — 长按 Fn</span></th>
+        <th><span data-en>R layer — hold pause</span><span data-zh>R 层 — 长按急停</span></th>
+      </tr></thead>
+      <tbody>
+        <tr><td><span data-en>Left stick</span><span data-zh>左摇杆</span></td><td class="mono">LX / LY</td><td class="mono">LX / LY</td><td class="mono">LX / LY</td></tr>
+        <tr><td><span data-en>Right stick</span><span data-zh>右摇杆</span></td><td class="mono">RX / RY</td><td class="mono">RX / RY</td><td class="mono">RX / RY</td></tr>
+        <tr><td><span data-en>Wheel forward</span><span data-zh>拨轮向前</span></td><td class="mono"><b>RT</b> <span data-en>analogue</span><span data-zh>模拟量</span></td><td class="mono">RT</td><td class="mono">RT</td></tr>
+        <tr><td><span data-en>Wheel backward</span><span data-zh>拨轮向后</span></td><td class="mono"><b>LT</b> <span data-en>analogue</span><span data-zh>模拟量</span></td><td class="mono">LT</td><td class="mono">LT</td></tr>
+        <tr><td><span data-en>Shutter</span><span data-zh>快门</span></td><td class="mono">A</td><td class="mono">START</td><td class="mono">A</td></tr>
+        <tr><td><span data-en>Photo/video switch</span><span data-zh>拍摄/录像切换</span></td><td class="mono">X</td><td class="mono">LS</td><td class="mono">X</td></tr>
+        <tr><td><span data-en>Custom key Fn</span><span data-zh>自定义键 Fn</span></td><td class="mono">Y</td><td class="mono"><span data-en>enters L</span><span data-zh>进入 L 层</span></td><td class="mono">Y</td></tr>
+        <tr><td><span data-en>Pause / return-to-home</span><span data-zh>急停 / 返航</span></td><td class="mono">B</td><td class="mono">RS</td><td class="mono"><span data-en>enters R</span><span data-zh>进入 R 层</span></td></tr>
+        <tr><td><span data-en>Mode switch S</span><span data-zh>挡位开关 S</span></td><td class="mono">LB</td><td class="mono">LB</td><td class="mono">LB</td></tr>
+        <tr><td><span data-en>Mode switch N</span><span data-zh>挡位开关 N</span></td><td class="mono">RB</td><td class="mono">RB</td><td class="mono">RB</td></tr>
+        <tr><td><span data-en>Mode switch C</span><span data-zh>挡位开关 C</span></td><td class="mono">BACK</td><td class="mono">BACK</td><td class="mono">START</td></tr>
+        <tr><td><span data-en>Right stick to an edge</span><span data-zh>右摇杆推到边</span></td><td class="mono">—</td><td class="mono"><span data-en>D-pad</span><span data-zh>十字键</span></td><td class="mono">—</td></tr>
+      </tbody>
+    </table>
+    <ul class="clean" style="margin-top:18px;color:var(--dim)">
+      <li><span data-en>One wheel becomes both analogue triggers by direction — aim with LT, fire with RT.</span><span data-zh>单个拨轮按方向拆成两个模拟扳机——LT 瞄准、RT 开火。</span></li>
+      <li><span data-en>Layers are exclusive: while a modifier is held only that layer is produced, so a press can never fire two actions.</span><span data-zh>长按层互斥：修饰键按住时只输出该层，一次按键绝不会同时触发两个动作。</span></li>
+      <li><span data-en>Digital thresholds use linear travel, unaffected by the aiming expo curve. The Xbox/GUIDE button is deliberately unmappable.</span><span data-zh>数字判定基于线性行程，不受瞄准 expo 曲线影响。Xbox/GUIDE 键故意不可映射。</span></li>
+    </ul>
+  </div>
+</section>
+
+<section id="games">
+  <div class="wrap">
+    <h2><span data-en>Game support</span><span data-zh>游戏兼容性</span></h2>
+    <p class="sub">
+      <span data-en>Because the OS sees a real Xbox 360 pad, XInput games work with zero configuration.</span>
+      <span data-zh>由于系统层面就是一台真 Xbox 360 手柄，XInput 游戏零配置即可用。</span>
+    </p>
+    <table>
+      <thead><tr><th><span data-en>Case</span><span data-zh>情况</span></th><th><span data-en>What to do</span><span data-zh>怎么做</span></th></tr></thead>
+      <tbody>
+        <tr><td><span data-en>XInput / DirectInput native — GTA, Saints Row, Just Cause, Battlefield V/2042, most 3A</span><span data-zh>原生支持手柄 — GTA、黑道圣徒、正当防卫、战地 V/2042 及多数 3A</span></td>
+            <td><span data-en>Just run the bridge.</span><span data-zh>直接开桥接即可。</span></td></tr>
+        <tr><td><span data-en>No controller support on PC (some older Battlefield entries)</span><span data-zh>PC 端不支持手柄（部分老战地）</span></td>
+            <td><span data-en>Put Steam Input or reWASD on top and emit keyboard/mouse.</span><span data-zh>用 Steam Input 或 reWASD 转成键盘鼠标输出。</span></td></tr>
+        <tr><td><span data-en>Minecraft Java Edition</span><span data-zh>我的世界 Java 版</span></td>
+            <td><span data-en>Java has no native gamepad — use Controllable / Controlify, or play Bedrock.</span><span data-zh>Java 版无原生手柄支持——用 Controllable / Controlify 模组，或玩基岩版。</span></td></tr>
+        <tr><td><span data-en>Drone simulators</span><span data-zh>无人机模拟器</span></td>
+            <td><span data-en>Works as a standard pad; some simulators want a real mode-2 layout, which the axis mapping covers.</span><span data-zh>作为标准手柄可用；轴映射可配成模式 2。</span></td></tr>
+      </tbody>
+    </table>
+  </div>
+</section>
+
+<section id="config">
+  <div class="wrap">
+    <h2><span data-en>Configuration</span><span data-zh>配置</span></h2>
+    <p class="sub">
+      <span data-en>Plain text, written next to the executable — no registry, no AppData.</span>
+      <span data-zh>纯文本文件，写在可执行文件旁边——不写注册表、不碰 AppData。</span>
+    </p>
+<pre><span data-en>; bridge.ini — polling, watchdog, dial behaviour, per-axis calibration</span><span data-zh>; bridge.ini — 轮询率、看门狗、拨轮行为、每轴校准</span>
+[global]
+port = auto
+channel_hz = 100
+button_hz = 50
+watchdog_ms = 300
+auto_profile = on
+
+[axis.left_x]
+min = 364
+center = 1024
+max = 1684
+deadzone = 0.08
+expo = 0.30
+invert = off
+
+<span data-en>; profiles/shooter.ini — one file per game or genre</span><span data-zh>; profiles/shooter.ini — 一个游戏或一类游戏一个档</span>
+[auto]
+process = bf2042.exe gtav.exe justcause4.exe
+
+[modifiers]
+L = btn.fn
+R = btn.rth
+
+[pad]
+A = btn.rec
+LB = mode.sport
+DPAD_RIGHT.L = stick.rx&gt;0.8
+LT = dial.neg
+RT = dial.pos</pre>
+    <p style="color:var(--dim);font-size:14.5px">
+      <span data-en>Sources: <code>btn.*</code> <code>mode.*</code> <code>stick.*</code> <code>dial*</code> <code>always</code> <code>never</code> <code>const.&lt;n&gt;</code>, with <code>&gt; &gt;= &lt; &lt;= !</code> comparisons. An unrecognised slot or source is printed on stderr rather than silently ignored.</span>
+      <span data-zh>可用源：<code>btn.*</code> <code>mode.*</code> <code>stick.*</code> <code>dial*</code> <code>always</code> <code>never</code> <code>const.&lt;n&gt;</code>，支持 <code>&gt; &gt;= &lt; &lt;= !</code> 比较。无法识别的槽位或源会打到 stderr，不会静默忽略。</span>
+    </p>
+    <h3 style="font-size:17px;margin-top:26px"><span data-en>Diagnostics</span><span data-zh>诊断工具</span></h3>
+    <p style="color:var(--dim);font-size:14.5px;margin-top:0">
+      <span data-en>When something does not work, the built-in tools answer "is it the cable, the driver, the protocol or the mapping?" without guesswork:</span>
+      <span data-zh>出问题时，内置工具能直接回答"是线材、驱动、协议还是映射的问题"，不用猜：</span>
+    </p>
+    <ul class="clean" style="color:var(--dim);font-size:14.5px">
+      <li><code>--scan</code> — <span data-en>probes every candidate port with real DUML instead of trusting port names</span><span data-zh>对每个候选口用真实 DUML 实测，不靠端口名猜</span></li>
+      <li><code>--listen</code> / <code>--raw</code> — <span data-en>byte-level truth: is anything coming back at all</span><span data-zh>原始字节层面：到底有没有回话</span></li>
+      <li><code>--sweep</code> / <code>--probe</code> / <code>--try</code> / <code>--baudsweep</code> — <span data-en>walk command groups, ids and baud rates</span><span data-zh>遍历命令组、命令号与波特率</span></li>
+      <li><code>bridge-tests</code> — <span data-en>offline tests against byte-exact protocol golden vectors, no hardware needed</span><span data-zh>对着逐字节协议黄金样本做离线测试，不需要硬件</span></li>
+    </ul>
+  </div>
+</section>
+
+<section id="protocol">
+  <div class="wrap">
+    <h2><span data-en>Protocol</span><span data-zh>协议细节</span></h2>
+    <p class="sub">
+      <span data-en>DJI's DUML framing, as reconstructed and verified against two independent community implementations.</span>
+      <span data-zh>DJI 的 DUML 帧格式，经两份独立社区实现交叉验证。</span>
+    </p>
+<pre>off  field
+0    0x55                      sync
+1    length low
+2    length high | version&lt;&lt;2  version = 1
+3    header CRC-8              reflected poly 0x8C, seed 0x77, over bytes 0..2
+4    source                    0x0A = host
+5    target                    0x06 = remote controller
+6-7  sequence                  little-endian
+8    command type              0x40 request; replies 0x80 / 0x20
+9    command set               0x06 remote set
+10   command id
+11.. payload
+N-2  packet CRC-16             reflected poly 0x8408, seed 0x3692, little-endian</pre>
+    <table>
+      <thead><tr><th>id</th><th>set</th><th><span data-en>reply</span><span data-zh>回包</span></th><th><span data-en>contents</span><span data-zh>内容</span></th></tr></thead>
+      <tbody>
+        <tr><td class="mono">0x01</td><td class="mono">0x06</td><td class="mono">38 B</td><td><span data-en>axes at 13/16/19/22/25, 16-bit LE, rest 1024, range ≈364…1684</span><span data-zh>轴在偏移 13/16/19/22/25，16 位小端，静止 1024，行程约 364…1684</span></td></tr>
+        <tr><td class="mono">0x27</td><td class="mono">0x06</td><td class="mono">58 B</td><td><span data-en>byte 28 flight mode, byte 29 button bits 0x02 0x04 0x60 0x80</span><span data-zh>第 28 字节挡位，第 29 字节按键位 0x02 0x04 0x60 0x80</span></td></tr>
+        <tr><td class="mono">0x1E</td><td class="mono">0x06</td><td class="mono">19 B</td><td><span data-en>status; byte 15 = battery %. Pushed about once a second.</span><span data-zh>状态包；第 15 字节为电量百分比。约每秒自发推送一次。</span></td></tr>
+        <tr><td class="mono">0x24</td><td class="mono">0x06</td><td class="mono">—</td><td><span data-en>payload 0x01 enables fast streaming, 0x00 restores normal</span><span data-zh>载荷 0x01 开启快速上报，0x00 恢复正常</span></td></tr>
+      </tbody>
+    </table>
+    <p style="color:var(--dim);font-size:14.5px">
+      <span data-en>The physical power key is a hardware switch, never reported over the protocol, so it cannot be mapped.</span>
+      <span data-zh>物理电源键是硬件开关，协议里不报文，因此无法映射。</span>
+    </p>
+  </div>
+</section>
+
+<section id="limits">
+  <div class="wrap">
+    <h2><span data-en>Known limitations</span><span data-zh>已知限制</span></h2>
+    <ul class="clean">
+      <li><span data-en>Four physical keys: games needing many simultaneous distinct buttons rely on hold layers, or on Steam Input / reWASD above the virtual pad.</span><span data-zh>只有 4 个实体键：需要大量同时按键的游戏要靠长按层，或在虚拟手柄之上再套 Steam Input / reWASD。</span></li>
+      <li><span data-en>Undocumented protocol — a firmware update on either side can break it at any time.</span><span data-zh>协议无公开文档，任一侧固件更新都可能随时让它失效。</span></li>
+      <li><span data-en>Springs return the sticks to centre, which is what games expect, but the travel is short — fine for third-person and driving, not for competitive FPS.</span><span data-zh>摇杆带回中弹簧，符合手柄预期，但行程较短——第三人称与驾驶合适，竞技 FPS 不建议。</span></li>
+      <li><span data-en>Only RC-N1/RC-N3 over the For Protocol interface was verified on hardware. The vendor bulk channels (MI_00/MI_01) are reachable via DJI's own libusb fork but are not implemented.</span><span data-zh>仅在 RC-N1/RC-N3 的 For Protocol 接口上做过真机验证。厂商 bulk 通道（MI_00/MI_01）可通过 DJI 自带的 libusb 分支访问，但本项目未实现。</span></li>
+      <li><span data-en>Virtual input devices can look suspicious to anti-cheat. Do not use it in ranked or online competitive play.</span><span data-zh>虚拟输入设备可能被反作弊视为可疑。请勿用于排位或联机竞技。</span></li>
+    </ul>
+    <div class="note" style="margin-top:22px">
+      <strong><span data-en>Safety</span><span data-zh>安全</span></strong>
+      <span data-en> — never run this while the remote is bound to a powered aircraft. The program only reads input, but a live controller can still transmit. Full terms in </span>
+      <span data-zh> —— 严禁在遥控器与已通电航空器保持连接时使用。程序虽只读取输入，但通电的遥控器仍可能发射信号。完整条款见 </span>
+      <a href="https://github.com/DengXiaoping8964/dji-rc-gamepad/blob/main/DISCLAIMER.md">DISCLAIMER.md</a>.
+    </div>
+  </div>
+</section>
+
+<section id="build">
+  <div class="wrap">
+    <h2><span data-en>Build from source</span><span data-zh>从源码构建</span></h2>
+<pre>build.bat        <span data-en># x64  -> build\dji-rc-bridge.exe</span><span data-zh># x64  -> build\dji-rc-bridge.exe</span>
+build-x86.bat    <span data-en># x86  -> build_x86\dji-rc-bridge.exe</span><span data-zh># x86  -> build_x86\dji-rc-bridge.exe</span>
+build\bridge-tests.exe</pre>
+    <p style="color:var(--dim);font-size:14.5px">
+      <span data-en>C++20, MSVC, CMake ≥ 3.20 and Ninja. The CRT is static, so the output is one self-contained executable. No network access anywhere in the program — it can be audited and run fully offline.</span>
+      <span data-zh>C++20、MSVC、CMake ≥ 3.20、Ninja。静态链接 CRT，产物为单个自包含可执行文件。程序内部无任何网络访问，可完全离线审计与运行。</span>
+    </p>
+    <div style="margin-top:8px">
+      <span class="badge">C++20</span><span class="badge">Windows 10/11</span>
+      <span class="badge">MIT</span><span class="badge">no telemetry</span>
+      <span class="badge">ViGEmBus</span>
+    </div>
+  </div>
+</section>
+
+<footer>
+  <div class="wrap">
+    <p><span data-en>Unofficial project. Not affiliated with, endorsed or supported by DJI. DJI, RC-N3, DJI Fly and DUML are trademarks of SZ DJI Technology Co., Ltd. Xbox is a trademark of Microsoft Corporation.</span>
+      <span data-zh>非官方项目，与大疆无隶属、认可或支持关系。DJI、RC-N3、DJI Fly、DUML 为深圳市大疆创新科技有限公司商标；Xbox 为微软公司商标。</span></p>
+    <p><span data-en>Released under the MIT License. Provided as-is, without warranty of any kind; use at your own risk — see</span>
+      <span data-zh>以 MIT 许可发布。按"现状"提供，无任何担保；使用风险自担，详见</span>
+      <a href="https://github.com/DengXiaoping8964/dji-rc-gamepad/blob/main/DISCLAIMER.md"><span data-en>the disclaimer</span><span data-zh>免责声明</span></a>.</p>
+  </div>
+</footer>
+
+<script>
+(function () {
+  var root = document.documentElement;
+  var en = document.getElementById('btn-en');
+  var zh = document.getElementById('btn-zh');
+  function set(lang) {
+    root.setAttribute('lang', lang);
+    root.setAttribute('data-lang', lang);
+    en.setAttribute('aria-pressed', lang === 'en');
+    zh.setAttribute('aria-pressed', lang === 'zh');
+    try { localStorage.setItem('dji-rc-bridge-lang', lang); } catch (e) {}
+  }
+  en.addEventListener('click', function () { set('en'); });
+  zh.addEventListener('click', function () { set('zh'); });
+  var saved = null;
+  try { saved = localStorage.getItem('dji-rc-bridge-lang'); } catch (e) {}
+  set(saved === 'zh' ? 'zh' : 'en');
+})();
+</script>
+</body>
+</html>
